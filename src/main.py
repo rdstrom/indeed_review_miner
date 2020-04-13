@@ -1,13 +1,24 @@
 import bs4 as bs
 from bs4 import Comment
+import time
 import re
 import pandas as pd
 import urllib.request
 
-#source_link = "https://www.indeed.com/cmp/JPMorgan-Chase/reviews?fcountry=ALL&start={0}".format(loop_num)
-source = urllib.request.urlopen('https://www.indeed.com/cmp/JPMorgan-Chase/reviews?fcountry=US').read()
-soup = bs.BeautifulSoup(source,'lxml') 
+#variables
+# review_df = pd.DataFrame(columns=['jobTitle', 
+#                                   'employeementStatus_flag', 
+#                                   'reviewDate', 
+#                                   'reviewTitle',
+#                                   'reviewRatingAll',
+#                                   'reviewBody',
+#                                   'reviewHelpful_yes',
+#                                   'reviewHelpful_no']
+#                         )
 
+review_df = pd.DataFrame()
+
+#Functions
 def review_scrape(soup):
     
     reviewJobTitle_list = []
@@ -30,7 +41,7 @@ def review_scrape(soup):
     for div in soup.find_all('div', class_ = 'cmp-Review-author'):
         reviewJobTitle_list.append(div.find('meta').get("content", None))
 
-    #Review Date
+    #Review Date --Sometimes this returns location data which throws and error RS 2020-04-12
     for div in soup.find_all('div', class_ = 'cmp-Review-author'):
         reviewDate_list.append(div.find_all(string=lambda text: isinstance(text, Comment))[2].next_element.strip())
 
@@ -51,7 +62,8 @@ def review_scrape(soup):
     #Review Sub Ratings (remove top 1 the assign every 5 per catagory)
     for div in soup.find_all('div', class_ = 'cmp-RatingStars-starsFilled'):
         reviewSubAll_list.append(div.get('style'))
-    
+    ['Team Name', 'Number', 'Position', 'Age', 
+                'Height', 'Weight', 'Education', 'Income'] 
     #itemprop="reviewBody"
 
     for span in soup.find_all('span', itemprop = 'reviewBody'):
@@ -84,15 +96,32 @@ def review_scrape(soup):
                   helpfulReview_no_list
                   )
     
-    return review_tuple
+    review_temp_df = pd.DataFrame(list(review_tuple))
+    
+    return review_temp_df
 
-review_tuple = review_scrape(soup)
+i = 20
+while i in range (20,1000):
+    url = ('https://www.indeed.com/cmp/JPMorgan-Chase/reviews?fcountry=ALL&start={0}').format(i)
+    source = urllib.request.urlopen(url).read()
+    soup = bs.BeautifulSoup(source,'lxml') 
+    review_df = review_df.append(review_scrape(soup))
+    i = i + 20
+    time.sleep(random.randrange(10, 20))
+    
 
-#Create Df
-review_df = pd.DataFrame(list(review_tuple))
-
-#Clean Pipe -- Should just turn this to a Bool Value
 review_df[1] = review_df[1].apply(lambda x: re.sub(r'[^\w]', ' ', x))
 review_df[1] = review_df[1].replace(' Current Employee ', True)
 review_df[1] = review_df[1].replace(' Former Employee ', False)
-review_df[2] = review_df[2].apply(lambda x: pd.to_datetime(x, infer_datetime_format=True))
+
+review_df[2] = review_df[2].apply(lambda x: pd.to_datetime(x, infer_datetime_format=True, errors='coerce'))
+review_df[2] = review_df[2].ffill()
+
+review_df.columns = ['jobTitle', 
+                     'employeementStatus_flag', 
+                     'reviewDate', 
+                     'reviewTitle',
+                     'reviewRatingAll',
+                     'reviewBody',
+                     'reviewHelpful_yes',
+                     'reviewHelpful_no']
