@@ -68,7 +68,7 @@ def review_scrape(soup):
     for div in soup.find_all('div', class_ = 'cmp-Review-title'):
         reviewTitle_list.append(div.text) 
         for comment in div.find_all(text=lambda text: isinstance(text, Comment) and text in comments_to_search_for):
-            print(comment.next_element.strip())
+            #print(comment.next_element.strip())
     
     #Review Rating All
     for div in soup.find_all('div', class_ = 'cmp-ReviewRating-text'):
@@ -77,7 +77,7 @@ def review_scrape(soup):
     #Review Sub Ratings (all in 1 list)
     for div in soup.find_all('div', class_ = 'cmp-SubRating'):
         for div in div.find_all('div', class_ = 'cmp-RatingStars-starsFilled'):
-            print(div.get('style'))
+            #print(div.get('style'))
             reviewSubAll_list.append(div.get('style'))
     
     #Splits list of all sub reviews into each catagory
@@ -152,3 +152,10 @@ review_df.columns = ['jobTitle',
                       'reviewHelpful_no']
 
 review_df_clean = format_review_df(review_df)
+
+review_df_clean_1 = pd.DataFrame(columns = review_df_clean.columns)
+for x in range(0,len(review_df_clean)):
+    data_to_append = review_df_clean.values[x]
+    temp_df = pd.DataFrame(data_to_append).T
+    temp_df.columns = review_df_clean.columns
+    review_df_clean_1 = review_df_clean_1.append(temp_df, ignore_index = True)
